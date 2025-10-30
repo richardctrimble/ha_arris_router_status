@@ -15,7 +15,7 @@ This component connects to your Arris router (ARRIS-based modem) and extracts co
 
 ## Sensors
 
-The component creates the following sensors, categorized by type:
+The component creates the following 29 sensors, categorized by type:
 
 ### Status Sensors (Dynamic Values)
 These sensors show current operational status and may change frequently:
@@ -58,25 +58,10 @@ These sensors show router configuration that rarely changes (marked as Configura
 
 The component communicates with your Arris router using unauthenticated API endpoints:
 
-1. **Main Page Access**: Connects to the router's web interface to establish session state
-2. **Status Endpoint**: Calls `connection_troubleshoot_data.php` for modem operational data
-3. **Network Status Endpoint**: Calls `ajaxGet_device_networkstatus_data.php` for comprehensive status, configuration, and channel data
-4. **Data Parsing**: Extracts all sensor values from the JSON responses
-5. **Sensor Updates**: Updates all sensors every 30 seconds with current router data
-
-No authentication is required as the component uses public API endpoints that provide status information without login credentials.
-
-## Installation
-
-## How It Works
-
-The component communicates with your Arris router using unauthenticated API endpoints:
-
-1. **Main Page Access**: Connects to the router's web interface to establish session state
-2. **Status Endpoint**: Calls `connection_troubleshoot_data.php` for modem operational data
-3. **Network Status Endpoint**: Calls `ajaxGet_device_networkstatus_data.php` for comprehensive status, configuration, and channel data
-4. **Data Parsing**: Extracts all sensor values from the JSON responses
-5. **Sensor Updates**: Updates all sensors every 30 seconds with current router data
+1. **Status Endpoint**: Calls `connection_troubleshoot_data.php` for modem operational data
+2. **Network Status Endpoint**: Calls `ajaxGet_device_networkstatus_data.php` for comprehensive status, configuration, and channel data
+3. **Data Parsing**: Extracts all sensor values from the JSON responses
+4. **Sensor Updates**: Updates all sensors every 30 seconds with current router data
 
 No authentication is required as the component uses public API endpoints that provide status information without login credentials.
 
@@ -117,10 +102,12 @@ No authentication is required as the component uses public API endpoints that pr
 ## Supported Routers
 
 This component has been tested with:
-- Arris routers with ARRIS firmware (various models)
+- Arris routers with ARRIS firmware (various models) **in modem mode only**
 - Default IP: 192.168.100.1
 - ISP Provider detection works for: Virgin Media, Ziggo, Telekom Austria, Yallo, Sunrise, Virgin Media Ireland
 - Channel and configuration data available on routers using the ajaxGet_device_networkstatus_data.php endpoint
+
+**Note**: This component was developed and tested specifically for Arris devices operating in modem mode. Router mode functionality has not been tested.
 
 ## Authentication Requirements
 
@@ -146,9 +133,9 @@ This component has been tested with:
 - If counts don't match, the router firmware may be different
 - Check router logs for any API endpoint changes
 
-### ISP Provider Shows "Unknown Provider"
+### ISP Provider Shows "Unknown ISP ID=X"
 - The component maps customer IDs to provider names
-- If your ISP isn't recognized, it will show "Liberty Global International (ID: X)"
+- If your ISP isn't recognized, it will show "Unknown ISP ID=X"
 - This doesn't affect other sensor functionality
 
 ### Connection Timeouts

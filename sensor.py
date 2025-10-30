@@ -359,7 +359,7 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 			50: "Yallo",
 			51: "Sunrise",
 		}
-		return provider_map.get(customer_id, f"Liberty Global International (ID: {customer_id})")
+		return provider_map.get(customer_id, f"Unknown ISP ID={customer_id}")
 
 
 async def async_setup_entry(
