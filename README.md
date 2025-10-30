@@ -2,33 +2,85 @@
 
 A Home Assistant custom component for monitoring Arris router status via HACS.
 
-This component connects to your Arris router (ARRIS-based modem) and extracts cable modem status information. It currently provides ISP provider detection and attempts to extract status data from various endpoints.
+This component connects to your Arris router (ARRIS-based modem) and extracts comprehensive cable modem status, configuration, and service flow information using unauthenticated API endpoints.
 
 ## Features
 
 - **ISP Provider Detection**: Automatically detects your ISP (Virgin Media, Ziggo, Telekom Austria, etc.)
-- **Cable Modem Status**: Shows modem status when accessible (may require authentication)
-- **Channel Information**: DOCSIS channel counts when data is available
-
-## Current Status
-
-✅ **Working**: ISP Provider detection  
-⚠️ **Limited**: Status data extraction (requires router authentication for full data)  
-🔄 **In Development**: Alternative data collection methods
+- **Cable Modem Status**: Complete modem operational status and registration information
+- **Channel Information**: Accurate DOCSIS 3.0 and 3.1 channel counts matching router UI
+- **Configuration Data**: Router configuration including DOCSIS mode, network access, and CPE limits
+- **Service Flow Parameters**: Primary downstream and upstream service flow details
+- **No Authentication Required**: Uses public API endpoints for data collection
 
 ## Sensors
 
 The component creates the following sensors:
 
-- `sensor.isp_provider` - ISP provider (Virgin Media, Ziggo, etc.) - ✅ Working
-- `sensor.cable_modem_status` - Overall modem status - ⚠️ Limited
-- `sensor.primary_downstream_channel` - Primary downstream channel status - ⚠️ Limited
-- `sensor.docsis_3_0_downstream_channels` - Number of DOCSIS 3.0 downstream channels - ⚠️ Limited
-- `sensor.docsis_3_0_upstream_channels` - Number of DOCSIS 3.0 upstream channels - ⚠️ Limited
-- `sensor.docsis_3_1_downstream_channels` - Number of DOCSIS 3.1 downstream channels - ⚠️ Limited
-- `sensor.docsis_3_1_upstream_channels` - Number of DOCSIS 3.1 upstream channels - ⚠️ Limited
+### Status & Operational Data
+- `sensor.cable_modem_status` - Overall modem status (Online/Offline)
+- `sensor.primary_downstream_channel` - Primary downstream channel lock status
+- `sensor.cable_modem_registration` - Modem registration state
+- `sensor.wan_ip_provision_mode` - WAN IP provisioning method (DHCP/Static/PPPoE)
+- `sensor.fail_safe_mode` - Fail-safe mode status
+- `sensor.no_rf_detected` - RF signal detection status
+
+### DOCSIS Information
+- `sensor.docsis_version` - Current DOCSIS version (3.0/3.1)
+- `sensor.docsis_mode` - DOCSIS operational mode
+
+### Channel Counts
+- `sensor.docsis_3_0_downstream_channels` - Number of DOCSIS 3.0 downstream channels
+- `sensor.docsis_3_0_upstream_channels` - Number of DOCSIS 3.0 upstream channels
+- `sensor.docsis_3_1_downstream_channels` - Number of DOCSIS 3.1 downstream channels
+- `sensor.docsis_3_1_upstream_channels` - Number of DOCSIS 3.1 upstream channels
+- `sensor.total_downstream_channels` - Total downstream channels
+- `sensor.total_upstream_channels` - Total upstream channels
+
+### Configuration Data
+- `sensor.isp_provider` - ISP provider name
+- `sensor.network_access` - Network access configuration
+- `sensor.max_cpes` - Maximum number of CPEs allowed
+- `sensor.baseline_privacy` - Baseline privacy setting
+- `sensor.config_file` - Configuration file identifier
+
+### Service Flow Parameters
+- `sensor.primary_downstream_sfid` - Primary downstream Service Flow ID
+- `sensor.primary_downstream_max_traffic_rate` - Primary downstream max traffic rate
+- `sensor.primary_downstream_max_traffic_burst` - Primary downstream max traffic burst
+- `sensor.primary_downstream_min_traffic_rate` - Primary downstream min traffic rate
+- `sensor.primary_upstream_sfid` - Primary upstream Service Flow ID
+- `sensor.primary_upstream_max_traffic_rate` - Primary upstream max traffic rate
+- `sensor.primary_upstream_max_traffic_burst` - Primary upstream max traffic burst
+- `sensor.primary_upstream_min_traffic_rate` - Primary upstream min traffic rate
+- `sensor.primary_upstream_max_concatenated_burst` - Primary upstream max concatenated burst
+- `sensor.primary_upstream_scheduling_type` - Primary upstream scheduling type
+
+## How It Works
+
+The component communicates with your Arris router using unauthenticated API endpoints:
+
+1. **Main Page Access**: Connects to the router's web interface to establish session state
+2. **Status Endpoint**: Calls `connection_troubleshoot_data.php` for modem operational data
+3. **Network Status Endpoint**: Calls `ajaxGet_device_networkstatus_data.php` for comprehensive status, configuration, and channel data
+4. **Data Parsing**: Extracts all sensor values from the JSON responses
+5. **Sensor Updates**: Updates all sensors every 30 seconds with current router data
+
+No authentication is required as the component uses public API endpoints that provide status information without login credentials.
 
 ## Installation
+
+## How It Works
+
+The component communicates with your Arris router using unauthenticated API endpoints:
+
+1. **Main Page Access**: Connects to the router's web interface to establish session state
+2. **Status Endpoint**: Calls `connection_troubleshoot_data.php` for modem operational data
+3. **Network Status Endpoint**: Calls `ajaxGet_device_networkstatus_data.php` for comprehensive status, configuration, and channel data
+4. **Data Parsing**: Extracts all sensor values from the JSON responses
+5. **Sensor Updates**: Updates all sensors every 30 seconds with current router data
+
+No authentication is required as the component uses public API endpoints that provide status information without login credentials.
 
 ### HACS (Recommended)
 
@@ -60,41 +112,51 @@ The component creates the following sensors:
 ## Requirements
 
 - Arris router in modem mode (ARRIS-based firmware)
-- Router accessible at the configured IP address
+- Router accessible at the configured IP address (default: 192.168.100.1)
 - Network connectivity between Home Assistant and router
+- No authentication required - uses public API endpoints
 
 ## Supported Routers
 
 This component has been tested with:
-- Arris routers with ARRIS firmware
+- Arris routers with ARRIS firmware (various models)
 - Default IP: 192.168.100.1
-- ISP Provider detection works for: Virgin Media, Ziggo, Telekom Austria, Yallo, Sunrise
+- ISP Provider detection works for: Virgin Media, Ziggo, Telekom Austria, Yallo, Sunrise, Virgin Media Ireland
+- Channel and configuration data available on routers using the ajaxGet_device_networkstatus_data.php endpoint
 
 ## Authentication Requirements
 
-**Current Limitation**: The ARRIS router firmware requires authentication to access full status data. The component currently:
-
-- ✅ Successfully detects ISP provider from the login page
-- ⚠️ Attempts multiple endpoints for status data but may show "Unavailable" if authentication is required
-
-**Future Enhancement**: SNMP support or authenticated API access may be added in future versions.
+**No Authentication Required**: This component uses unauthenticated API endpoints that provide comprehensive status and configuration data without requiring login credentials. All sensor data is collected automatically without user intervention.
 
 ## Troubleshooting
 
-### ISP Provider Shows Correctly But Status Shows "Unavailable"
-- This is expected behavior for routers requiring authentication
-- The component successfully detects your ISP but cannot access detailed status data
-- Check router firmware version and authentication requirements
+### All Sensors Show "Unavailable"
+- Check that the router IP address is correct (default: 192.168.100.1)
+- Verify network connectivity between Home Assistant and the router
+- Ensure the router is powered on and functioning
+- Check router firmware - must be ARRIS-based with the ajaxGet_device_networkstatus_data.php endpoint
 
 ### Component Not Loading
-- Ensure the router IP address is correct
+- Ensure the router IP address is reachable from your network
 - Check that your router uses ARRIS firmware
-- Verify network connectivity to the router
+- Verify the custom_components directory structure is correct
+- Restart Home Assistant after installation
 
-### Connection Issues
-- Ensure Home Assistant can reach the router IP
-- Check firewall settings on your network
-- Verify the router hasn't changed IP addresses
+### Incorrect Channel Counts
+- The component uses direct channel counts from the router's API
+- Compare with your router's web interface at the same time
+- If counts don't match, the router firmware may be different
+- Check router logs for any API endpoint changes
+
+### ISP Provider Shows "Unknown Provider"
+- The component maps customer IDs to provider names
+- If your ISP isn't recognized, it will show "Liberty Global International (ID: X)"
+- This doesn't affect other sensor functionality
+
+### Connection Timeouts
+- Increase timeout settings if your network is slow
+- Check for network congestion or firewall rules
+- Ensure the router isn't overloaded with requests
 
 ## Contributing
 
