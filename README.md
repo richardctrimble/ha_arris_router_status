@@ -15,21 +15,18 @@ This component connects to your Arris router (ARRIS-based modem) and extracts co
 
 ## Sensors
 
-The component creates the following sensors:
+The component creates the following sensors, categorized by type:
 
-### Status & Operational Data
+### Status Sensors (Dynamic Values)
+These sensors show current operational status and may change frequently:
+
 - `sensor.cable_modem_status` - Overall modem status (Online/Offline)
 - `sensor.primary_downstream_channel` - Primary downstream channel lock status
+- `sensor.docsis_version` - Current DOCSIS version (3.0/3.1)
 - `sensor.cable_modem_registration` - Modem registration state
 - `sensor.wan_ip_provision_mode` - WAN IP provisioning method (DHCP/Static/PPPoE)
 - `sensor.fail_safe_mode` - Fail-safe mode status
 - `sensor.no_rf_detected` - RF signal detection status
-
-### DOCSIS Information
-- `sensor.docsis_version` - Current DOCSIS version (3.0/3.1)
-- `sensor.docsis_mode` - DOCSIS operational mode
-
-### Channel Counts
 - `sensor.docsis_3_0_downstream_channels` - Number of DOCSIS 3.0 downstream channels
 - `sensor.docsis_3_0_upstream_channels` - Number of DOCSIS 3.0 upstream channels
 - `sensor.docsis_3_1_downstream_channels` - Number of DOCSIS 3.1 downstream channels
@@ -37,14 +34,15 @@ The component creates the following sensors:
 - `sensor.total_downstream_channels` - Total downstream channels
 - `sensor.total_upstream_channels` - Total upstream channels
 
-### Configuration Data
+### Configuration Sensors (Static Values)
+These sensors show router configuration that rarely changes (marked as Configuration in Home Assistant):
+
 - `sensor.isp_provider` - ISP provider name
 - `sensor.network_access` - Network access configuration
 - `sensor.max_cpes` - Maximum number of CPEs allowed
 - `sensor.baseline_privacy` - Baseline privacy setting
+- `sensor.docsis_mode` - DOCSIS operational mode
 - `sensor.config_file` - Configuration file identifier
-
-### Service Flow Parameters
 - `sensor.primary_downstream_sfid` - Primary downstream Service Flow ID
 - `sensor.primary_downstream_max_traffic_rate` - Primary downstream max traffic rate
 - `sensor.primary_downstream_max_traffic_burst` - Primary downstream max traffic burst

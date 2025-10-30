@@ -8,11 +8,10 @@ from typing import Any
 
 import aiohttp
 import json
-from bs4 import BeautifulSoup
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
@@ -20,6 +19,7 @@ from homeassistant.helpers.update_coordinator import (
 	DataUpdateCoordinator,
 	UpdateFailed,
 )
+from homeassistant.helpers.entity import EntityCategory
 
 from . import DOMAIN
 
@@ -97,81 +97,97 @@ SENSOR_DESCRIPTIONS = [
 		key="isp_provider",
 		name="ISP Provider",
 		icon="mdi:account-network",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="network_access",
 		name="Network Access",
 		icon="mdi:network",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="max_cpes",
 		name="Maximum Number of CPEs",
 		icon="mdi:devices",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="baseline_privacy",
 		name="Baseline Privacy",
 		icon="mdi:shield",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="docsis_mode",
 		name="DOCSIS Mode",
 		icon="mdi:network",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="config_file",
 		name="Config File",
 		icon="mdi:file-document",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_downstream_sfid",
 		name="Primary Downstream SFID",
 		icon="mdi:download",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_downstream_max_traffic_rate",
 		name="Primary Downstream Max Traffic Rate",
 		icon="mdi:download",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_downstream_max_traffic_burst",
 		name="Primary Downstream Max Traffic Burst",
 		icon="mdi:download",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_downstream_min_traffic_rate",
 		name="Primary Downstream Min Traffic Rate",
 		icon="mdi:download",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_sfid",
 		name="Primary Upstream SFID",
 		icon="mdi:upload",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_max_traffic_rate",
 		name="Primary Upstream Max Traffic Rate",
 		icon="mdi:upload",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_max_traffic_burst",
 		name="Primary Upstream Max Traffic Burst",
 		icon="mdi:upload",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_min_traffic_rate",
 		name="Primary Upstream Min Traffic Rate",
 		icon="mdi:upload",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_max_concatenated_burst",
 		name="Primary Upstream Max Concatenated Burst",
 		icon="mdi:upload",
+		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_scheduling_type",
 		name="Primary Upstream Scheduling Type",
 		icon="mdi:upload",
+		entity_category=EntityCategory.CONFIG,
 	),
 ]
 
@@ -193,17 +209,6 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 		"""Update data via library."""
 		try:
 			async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-				# Get the main page to extract ISP provider and to allow JS-driven session state
-				html_content = ""
-				try:
-					async with session.get(f"http://{self.host}/") as response:
-						if response.status == 200:
-							html_content = await response.text()
-						else:
-							_LOGGER.debug("Failed to get main page: HTTP %s", response.status)
-				except Exception as e:
-					_LOGGER.debug("Error getting main page: %s", e)
-
 				data: dict[str, Any] = {}
 
 				# 1) Try the connection_troubleshoot_data endpoint which provides simple modem state
@@ -343,141 +348,6 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 		except aiohttp.ClientError as err:
 				raise UpdateFailed(f"Error communicating with router: {err}") from err
 
-	def _has_status_data(self, content: str) -> bool:
-		"""Check if content contains status data."""
-		status_indicators = ["Online", "DOCSIS", "Cable Modem", "Locked", "Downstream", "Upstream"]
-		return any(indicator in content for indicator in status_indicators)
-
-	def _parse_status_page(self, html: str, main_html: str = "") -> dict[str, Any]:
-		"""Parse the router status page HTML."""
-		soup = BeautifulSoup(html, 'html.parser')
-		data = {}
-        
-		try:
-			_LOGGER.debug("Parsing HTML content (first 1000 chars): %s", html[:1000])
-			
-			# Look for table rows containing status information
-			rows = soup.find_all('tr')
-			_LOGGER.debug("Found %d table rows", len(rows))
-            
-			for row in rows:
-				cells = row.find_all(['td', 'th'])
-				if len(cells) >= 2:
-					key = cells[0].get_text(strip=True).lower()
-					value = cells[1].get_text(strip=True)
-					_LOGGER.debug("Found table row: %s = %s", key, value)
-                    
-					# Map the status items to our sensor keys
-					if "cable modem status" in key:
-						data["cable_modem_status"] = value
-					elif "primary downstream channel" in key:
-						data["primary_downstream_channel"] = value
-					elif "docsis 3.0 channels" in key and "downstream" in key:
-						data["docsis_3_0_downstream"] = value
-					elif "docsis 3.0 channels" in key and "upstream" in key:
-						data["docsis_3_0_upstream"] = value
-					elif "docsis 3.1 channels" in key and "downstream" in key:
-						data["docsis_3_1_downstream"] = value
-					elif "docsis 3.1 channels" in key and "upstream" in key:
-						data["docsis_3_1_upstream"] = value
-
-			# Try alternative parsing methods
-			if not any(k in data for k in ["cable_modem_status", "primary_downstream_channel", "docsis_3_0_downstream"]):
-				_LOGGER.debug("Table parsing failed, trying alternative methods")
-				
-				# Look for div elements with status information
-				divs = soup.find_all('div')
-				for div in divs:
-					text = div.get_text(strip=True)
-					if "Cable Modem Status" in text and "Online" in text:
-						data["cable_modem_status"] = "Online"
-					elif "Primary downstream channel" in text and "Locked" in text:
-						data["primary_downstream_channel"] = "Locked"
-				
-				# Look for spans
-				spans = soup.find_all('span')
-				for span in spans:
-					text = span.get_text(strip=True)
-					if text.isdigit():
-						# Try to find context for numbers
-						parent = span.parent
-						if parent:
-							parent_text = parent.get_text(strip=True).lower()
-							if "docsis 3.0" in parent_text and "downstream" in parent_text:
-								data["docsis_3_0_downstream"] = text
-							elif "docsis 3.0" in parent_text and "upstream" in parent_text:
-								data["docsis_3_0_upstream"] = text
-							elif "docsis 3.1" in parent_text and "downstream" in parent_text:
-								data["docsis_3_1_downstream"] = text
-							elif "docsis 3.1" in parent_text and "upstream" in parent_text:
-								data["docsis_3_1_upstream"] = text
-
-			# Parse ISP Provider from main page HTML
-			if main_html:
-				data["isp_provider"] = self._parse_isp_provider(main_html)
-			else:
-				data["isp_provider"] = self._parse_isp_provider(html)
-
-			_LOGGER.debug("Final parsed data: %s", data)
-			return data
-			
-		except Exception as err:
-			_LOGGER.error("Error parsing status page: %s", err)
-			raise UpdateFailed(f"Error parsing status page: {err}") from err
-
-	def _parse_isp_provider(self, html: str) -> str:
-		"""Parse ISP provider from JavaScript customer ID."""
-		try:
-			# Look for the JavaScript code that sets the customer ID
-			import re
-			
-			# Find customerId() function calls or customer ID assignments
-			customer_patterns = [
-				r'customerId\(\)\s*==\s*(\d+)',
-				r'customerId\s*=\s*(\d+)',
-				r'customerId\(\)\s*===\s*(\d+)',
-			]
-			
-			for pattern in customer_patterns:
-				matches = re.findall(pattern, html, re.IGNORECASE)
-				if matches:
-					customer_id = int(matches[0])
-					
-					# Map customer ID to provider name
-					provider_map = {
-						6: "Virgin Media (VTR)",
-						8: "Virgin Media",
-						20: "Ziggo",
-						41: "Virgin Media Ireland",
-						44: "Telekom Austria",
-						50: "Yallo",
-						51: "Sunrise",
-					}
-					
-					return provider_map.get(customer_id, f"Liberty Global International (ID: {customer_id})")
-			
-			# Fallback: try to find provider names in the JavaScript
-			if "CustNameVM" in html:
-				return "Virgin Media"
-			elif "CustNameZiggo" in html:
-				return "Ziggo"
-			elif "CustNameTMAustria" in html:
-				return "Telekom Austria"
-			elif "CustNameYallo" in html:
-				return "Yallo"
-			elif "CustNameSunrise" in html:
-				return "Sunrise"
-			elif "CustNameVMIE" in html:
-				return "Virgin Media Ireland"
-			elif "CustNameVTR" in html:
-				return "Virgin Media (VTR)"
-			else:
-				return "Unknown Provider"
-				
-		except Exception as err:
-			_LOGGER.warning("Error parsing ISP provider: %s", err)
-			return "Unknown Provider"
-
 	def _map_customer_id(self, customer_id: int) -> str:
 		"""Map customer ID to ISP provider name."""
 		provider_map = {
@@ -528,6 +398,8 @@ class ArrisSensor(CoordinatorEntity, SensorEntity):
 			"manufacturer": "ARRIS",
 			"model": "Cable Modem",
 		}
+		if description.entity_category:
+			self._attr_entity_category = description.entity_category
 
 	@property
 	def native_value(self) -> str | None:
