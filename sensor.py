@@ -293,16 +293,17 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 				# 2) Try ajaxGet_device_networkstatus_data.php - contains all status and config data
 				try:
 					dn_url = f"http://{self.host}/php/ajaxGet_device_networkstatus_data.php"
-					async with session.post(dn_url) as resp:
-						_LOGGER.info("ajaxGet_device_networkstatus_data.php status: %s", resp.status)
+					payload = {"userData": json.dumps({"networkStatusData": ""})}
+					async with session.post(dn_url, data=payload) as resp:
+						_LOGGER.debug("ajaxGet_device_networkstatus_data.php status: %s", resp.status)
 						if resp.status == 200:
 							# This endpoint returns JSON array with all the data we need
 							j = await resp.json()
-							_LOGGER.info("ajaxGet_device_networkstatus_data returned JSON array with length: %s", len(j) if hasattr(j, '__len__') else 'N/A')
+							_LOGGER.debug("ajaxGet_device_networkstatus_data returned JSON array with length: %s", len(j) if hasattr(j, '__len__') else 'N/A')
 							_LOGGER.debug("Full JSON response: %s", j)
 							try:
 								if isinstance(j, list) and len(j) >= 30:
-									_LOGGER.info("JSON array meets requirements (>=30 elements), extracting data")
+									_LOGGER.debug("JSON array meets requirements (>=30 elements), extracting data")
 									# Extract config and status data by index
 									# Index mapping based on endpoint response
 									data["primary_downstream_channel"] = j[2] if j[2] == "Locked" else None
@@ -324,7 +325,7 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 									data["primary_upstream_max_concatenated_burst"] = j[18]
 									data["primary_upstream_scheduling_type"] = j[19]
 
-									_LOGGER.info("Configuration data extracted: isp_provider=%s, network_access=%s, max_cpes=%s", 
+									_LOGGER.debug("Configuration data extracted: isp_provider=%s, network_access=%s, max_cpes=%s", 
 												data.get("isp_provider"), data.get("network_access"), data.get("max_cpes"))
 
 									# Channel counts are provided directly at the end
@@ -388,8 +389,15 @@ async def async_setup_entry(
 
 	entities = []
 	for description in SENSOR_DESCRIPTIONS:
-		entities.append(ArrisSensor(coordinator, description))
+		try:
+			sensor = ArrisSensor(coordinator, description)
+			entities.append(sensor)
+			_LOGGER.debug("Created sensor: %s (category: %s)", description.key, 
+						 description.entity_category.value if description.entity_category else "default")
+		except Exception as err:
+			_LOGGER.error("Failed to create sensor %s: %s", description.key, err)
 
+	_LOGGER.info("Created %d total sensors", len(entities))
 	async_add_entities(entities)
 
 
@@ -423,7 +431,8 @@ class ArrisSensor(CoordinatorEntity, SensorEntity):
 	def available(self) -> bool:
 		"""Return if entity is available."""
 		is_available = self.coordinator.last_update_success and self.native_value is not None
-		if not is_available and self.entity_description.key.startswith(('isp_provider', 'network_access', 'max_cpes')):
-			_LOGGER.info("Config sensor %s unavailable: last_update_success=%s, native_value=%s", 
-						 self.entity_description.key, self.coordinator.last_update_success, self.native_value)
+		if not is_available:
+			category = self.entity_description.entity_category.value if self.entity_description.entity_category else "default"
+			_LOGGER.info("CONFIG sensor %s unavailable: last_update_success=%s, native_value=%s, category=%s",
+						 self.entity_description.key, self.coordinator.last_update_success, self.native_value, category)
 		return is_available

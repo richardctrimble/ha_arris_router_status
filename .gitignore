@@ -120,3 +120,8 @@ storage/
 .db
 .secrets.yaml
 secrets.yaml
+
+# Test files (development only, not for distribution)
+test_router.py
+TEST_README.md
+requirements.txt
