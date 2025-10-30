@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import aiohttp
@@ -94,100 +94,90 @@ SENSOR_DESCRIPTIONS = [
 		icon="mdi:upload-multiple",
 	),
 	SensorEntityDescription(
+		key="last_update_time",
+		name="Last Update Time",
+		icon="mdi:clock-outline",
+		entity_category=EntityCategory.DIAGNOSTIC,
+	),
+	SensorEntityDescription(
 		key="isp_provider",
 		name="ISP Provider",
 		icon="mdi:account-network",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="network_access",
 		name="Network Access",
 		icon="mdi:network",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="max_cpes",
 		name="Maximum Number of CPEs",
 		icon="mdi:devices",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="baseline_privacy",
 		name="Baseline Privacy",
 		icon="mdi:shield",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="docsis_mode",
 		name="DOCSIS Mode",
 		icon="mdi:network",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="config_file",
 		name="Config File",
 		icon="mdi:file-document",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_downstream_sfid",
 		name="Primary Downstream SFID",
 		icon="mdi:download",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_downstream_max_traffic_rate",
 		name="Primary Downstream Max Traffic Rate",
 		icon="mdi:download",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_downstream_max_traffic_burst",
 		name="Primary Downstream Max Traffic Burst",
 		icon="mdi:download",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_downstream_min_traffic_rate",
 		name="Primary Downstream Min Traffic Rate",
 		icon="mdi:download",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_sfid",
 		name="Primary Upstream SFID",
 		icon="mdi:upload",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_max_traffic_rate",
 		name="Primary Upstream Max Traffic Rate",
 		icon="mdi:upload",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_max_traffic_burst",
 		name="Primary Upstream Max Traffic Burst",
 		icon="mdi:upload",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_min_traffic_rate",
 		name="Primary Upstream Min Traffic Rate",
 		icon="mdi:upload",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_max_concatenated_burst",
 		name="Primary Upstream Max Concatenated Burst",
 		icon="mdi:upload",
-		entity_category=EntityCategory.CONFIG,
 	),
 	SensorEntityDescription(
 		key="primary_upstream_scheduling_type",
 		name="Primary Upstream Scheduling Type",
 		icon="mdi:upload",
-		entity_category=EntityCategory.CONFIG,
 	),
 ]
 
@@ -354,6 +344,9 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 				except Exception as err:
 					_LOGGER.debug("Error calling ajaxGet_device_networkstatus_data: %s", err)
 
+				# Store the last update time in UTC
+				data["last_update_time"] = datetime.utcnow().isoformat() + "Z"
+
 				_LOGGER.info("Final data dictionary contains %d keys: %s", len(data), list(data.keys()))
 				_LOGGER.debug("Data values: %s", data)
 				return data
@@ -432,7 +425,6 @@ class ArrisSensor(CoordinatorEntity, SensorEntity):
 		"""Return if entity is available."""
 		is_available = self.coordinator.last_update_success and self.native_value is not None
 		if not is_available:
-			category = self.entity_description.entity_category.value if self.entity_description.entity_category else "default"
-			_LOGGER.info("CONFIG sensor %s unavailable: last_update_success=%s, native_value=%s, category=%s",
-						 self.entity_description.key, self.coordinator.last_update_success, self.native_value, category)
+			_LOGGER.debug("Sensor %s unavailable: last_update_success=%s, native_value=%s", 
+						 self.entity_description.key, self.coordinator.last_update_success, self.native_value)
 		return is_available

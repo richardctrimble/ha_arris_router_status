@@ -115,8 +115,7 @@ dmypy.json
 
 # Home Assistant
 deps/
-config/
-storage/
+
 .db
 .secrets.yaml
 secrets.yaml
