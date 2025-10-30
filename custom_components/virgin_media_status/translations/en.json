@@ -1,1 +1,21 @@
-# ...existing code...
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Virgin Media Router Status",
+                "description": "Enter your Virgin Media router details",
+                "data": {
+                    "host": "Router IP Address"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to the router",
+            "invalid_host": "Invalid host address",
+            "unknown": "Unexpected error occurred"
+        },
+        "abort": {
+            "already_configured": "Device is already configured"
+        }
+    }
+}

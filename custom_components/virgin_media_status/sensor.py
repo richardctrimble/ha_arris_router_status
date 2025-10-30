@@ -210,4 +210,3 @@ class VirginMediaSensor(CoordinatorEntity, SensorEntity):
 	def available(self) -> bool:
 		"""Return if entity is available."""
 		return self.coordinator.last_update_success and self.native_value is not None
-# ...existing code...
