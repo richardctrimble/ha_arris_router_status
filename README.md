@@ -15,146 +15,70 @@ This component connects to your Arris router (ARRIS-based modem) and extracts co
 
 ## Sensors
 
-The component creates the following 29 sensors, categorized by type:
+The component creates 29 sensors, categorized as:
 
-### Status Sensors (Dynamic Values)
-These sensors show current operational status and may change frequently:
+### Status Sensors (13 sensors)
+Dynamic values that may change frequently:
+- Cable modem status, registration, WAN IP mode, fail-safe mode, RF detection
+- DOCSIS version and channel counts (3.0/3.1 downstream/upstream, totals)
 
-- `sensor.cable_modem_status` - Overall modem status (Online/Offline)
-- `sensor.primary_downstream_channel` - Primary downstream channel lock status
-- `sensor.docsis_version` - Current DOCSIS version (3.0/3.1)
-- `sensor.cable_modem_registration` - Modem registration state
-- `sensor.wan_ip_provision_mode` - WAN IP provisioning method (DHCP/Static/PPPoE)
-- `sensor.fail_safe_mode` - Fail-safe mode status
-- `sensor.no_rf_detected` - RF signal detection status
-- `sensor.docsis_3_0_downstream_channels` - Number of DOCSIS 3.0 downstream channels
-- `sensor.docsis_3_0_upstream_channels` - Number of DOCSIS 3.0 upstream channels
-- `sensor.docsis_3_1_downstream_channels` - Number of DOCSIS 3.1 downstream channels
-- `sensor.docsis_3_1_upstream_channels` - Number of DOCSIS 3.1 upstream channels
-- `sensor.total_downstream_channels` - Total downstream channels
-- `sensor.total_upstream_channels` - Total upstream channels
+### Configuration Sensors (16 sensors)
+Static values marked as "Configuration" in Home Assistant:
+- ISP provider, network access, max CPEs, baseline privacy, DOCSIS mode, config file
+- Primary service flow parameters (SFID, traffic rates, burst limits, scheduling)
 
-### Configuration Sensors (Static Values)
-These sensors show router configuration that rarely changes (marked as Configuration in Home Assistant):
-
-- `sensor.isp_provider` - ISP provider name
-- `sensor.network_access` - Network access configuration
-- `sensor.max_cpes` - Maximum number of CPEs allowed
-- `sensor.baseline_privacy` - Baseline privacy setting
-- `sensor.docsis_mode` - DOCSIS operational mode
-- `sensor.config_file` - Configuration file identifier
-- `sensor.primary_downstream_sfid` - Primary downstream Service Flow ID
-- `sensor.primary_downstream_max_traffic_rate` - Primary downstream max traffic rate
-- `sensor.primary_downstream_max_traffic_burst` - Primary downstream max traffic burst
-- `sensor.primary_downstream_min_traffic_rate` - Primary downstream min traffic rate
-- `sensor.primary_upstream_sfid` - Primary upstream Service Flow ID
-- `sensor.primary_upstream_max_traffic_rate` - Primary upstream max traffic rate
-- `sensor.primary_upstream_max_traffic_burst` - Primary upstream max traffic burst
-- `sensor.primary_upstream_min_traffic_rate` - Primary upstream min traffic rate
-- `sensor.primary_upstream_max_concatenated_burst` - Primary upstream max concatenated burst
-- `sensor.primary_upstream_scheduling_type` - Primary upstream scheduling type
-
-## How It Works
-
-The component communicates with your Arris router using unauthenticated API endpoints:
-
-1. **Status Endpoint**: Calls `connection_troubleshoot_data.php` for modem operational data
-2. **Network Status Endpoint**: Calls `ajaxGet_device_networkstatus_data.php` for comprehensive status, configuration, and channel data
-3. **Data Parsing**: Extracts all sensor values from the JSON responses
-4. **Sensor Updates**: Updates all sensors every 30 seconds with current router data
-
-No authentication is required as the component uses public API endpoints that provide status information without login credentials.
+## Installation
 
 ### HACS (Recommended)
+1. Add `https://github.com/richardctrimble/ha_arris_router_status` as custom repository
+2. Install "Arris Router Status" integration
+3. Restart Home Assistant
 
-1. Open HACS in your Home Assistant instance
-2. Go to "Integrations"
-3. Click the three dots in the top right corner
-4. Select "Custom repositories"
-5. Add this repository URL: `https://github.com/richardctrimble/ha_arris_router_status`
-6. Select "Integration" as the category
-7. Click "Add"
-8. Search for "Arris Router Status" and install it
-9. Restart Home Assistant
-
-### Manual Installation
-
-1. Copy the `custom_components/ha_arris_router_status` folder to your Home Assistant `custom_components` directory
+### Manual
+1. Copy `custom_components/ha_arris_router_status` to your HA `custom_components` directory
 2. Restart Home Assistant
-3. Go to Configuration > Integrations
-4. Click "Add Integration" and search for "Arris Router Status"
+3. Add integration via Configuration > Integrations
 
 ## Configuration
 
-1. Go to Configuration > Integrations in Home Assistant
-2. Click "Add Integration"
-3. Search for "Arris Router Status"
-4. Enter your router's IP address (default: 192.168.100.1)
-5. Click Submit
+Add the integration and enter your router IP (default: 192.168.100.1).
 
 ## Requirements
 
 - Arris router in modem mode (ARRIS-based firmware)
-- Router accessible at the configured IP address (default: 192.168.100.1)
-- Network connectivity between Home Assistant and router
-- No authentication required - uses public API endpoints
+- Router accessible at configured IP address
+- No authentication required
 
 ## Supported Routers
 
-This component has been tested with:
 - Arris routers with ARRIS firmware (various models) **in modem mode only**
 - Default IP: 192.168.100.1
-- ISP Provider detection works for: Virgin Media, Ziggo, Telekom Austria, Yallo, Sunrise, Virgin Media Ireland
-- Channel and configuration data available on routers using the ajaxGet_device_networkstatus_data.php endpoint
+- ISP detection: Virgin Media, Ziggo, Telekom Austria, Yallo, Sunrise, Virgin Media Ireland
 
-**Note**: This component was developed and tested specifically for Arris devices operating in modem mode. Router mode functionality has not been tested.
-
-## Authentication Requirements
-
-**No Authentication Required**: This component uses unauthenticated API endpoints that provide comprehensive status and configuration data without requiring login credentials. All sensor data is collected automatically without user intervention.
+**Note**: Tested only in modem mode. Router mode functionality not tested.
 
 ## Troubleshooting
 
 ### All Sensors Show "Unavailable"
-- Check that the router IP address is correct (default: 192.168.100.1)
-- Verify network connectivity between Home Assistant and the router
-- Ensure the router is powered on and functioning
-- Check router firmware - must be ARRIS-based with the ajaxGet_device_networkstatus_data.php endpoint
-
-### Component Not Loading
-- Ensure the router IP address is reachable from your network
-- Check that your router uses ARRIS firmware
-- Verify the custom_components directory structure is correct
-- Restart Home Assistant after installation
+- Verify router IP address and network connectivity
+- Ensure router is ARRIS-based with `ajaxGet_device_networkstatus_data.php` endpoint
 
 ### Incorrect Channel Counts
-- The component uses direct channel counts from the router's API
-- Compare with your router's web interface at the same time
-- If counts don't match, the router firmware may be different
-- Check router logs for any API endpoint changes
+- Compare with router web interface
+- Router firmware differences may cause discrepancies
 
 ### ISP Provider Shows "Unknown ISP ID=X"
-- The component maps customer IDs to provider names
-- If your ISP isn't recognized, it will show "Unknown ISP ID=X"
-- This doesn't affect other sensor functionality
-
-### Connection Timeouts
-- Increase timeout settings if your network is slow
-- Check for network congestion or firewall rules
-- Ensure the router isn't overloaded with requests
+- Component maps known customer IDs to provider names
+- Unknown ISPs show as "Unknown ISP ID=X"
 
 ## Contributing
 
-1. Fork this repository
-2. Create a feature branch
-3. Make your changes
-4. Test with your Arris router
-5. Submit a pull request
+Fork, create feature branch, test with Arris router, submit PR.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License - see LICENSE file.
 
 ## Disclaimer
 
-This is an unofficial integration not affiliated with Arris. Use at your own risk.
+Unofficial integration not affiliated with Arris. Use at your own risk.
