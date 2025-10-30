@@ -1,0 +1,12 @@
+{
+  "domain": "ha_arris_router_status",
+  "name": "Arris Router Status",
+  "version": "1.0.0",
+  "documentation": "https://github.com/richardctrimble/ha_arris_router_status",
+  "issue_tracker": "https://github.com/richardctrimble/ha_arris_router_status/issues",
+  "dependencies": [],
+  "codeowners": ["@richardctrimble"],
+  "requirements": ["beautifulsoup4==4.12.2", "aiohttp>=3.8.0"],
+  "config_flow": true,
+  "iot_class": "local_polling"
+}
