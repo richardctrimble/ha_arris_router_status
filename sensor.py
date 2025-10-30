@@ -39,6 +39,31 @@ SENSOR_DESCRIPTIONS = [
 		icon="mdi:download",
 	),
 	SensorEntityDescription(
+		key="docsis_version",
+		name="DOCSIS Version",
+		icon="mdi:network",
+	),
+	SensorEntityDescription(
+		key="cable_modem_registration",
+		name="Cable Modem Registration",
+		icon="mdi:check-network",
+	),
+	SensorEntityDescription(
+		key="wan_ip_provision_mode",
+		name="WAN IP Provision Mode",
+		icon="mdi:ip-network",
+	),
+	SensorEntityDescription(
+		key="fail_safe_mode",
+		name="Fail Safe Mode",
+		icon="mdi:alert-circle",
+	),
+	SensorEntityDescription(
+		key="no_rf_detected",
+		name="No RF Detected",
+		icon="mdi:antenna",
+	),
+	SensorEntityDescription(
 		key="docsis_3_0_downstream",
 		name="DOCSIS 3.0 Downstream Channels",
 		icon="mdi:download-network",
@@ -59,9 +84,94 @@ SENSOR_DESCRIPTIONS = [
 		icon="mdi:upload-network",
 	),
 	SensorEntityDescription(
+		key="total_downstream_channels",
+		name="Total Downstream Channels",
+		icon="mdi:download-multiple",
+	),
+	SensorEntityDescription(
+		key="total_upstream_channels",
+		name="Total Upstream Channels",
+		icon="mdi:upload-multiple",
+	),
+	SensorEntityDescription(
 		key="isp_provider",
 		name="ISP Provider",
 		icon="mdi:account-network",
+	),
+	SensorEntityDescription(
+		key="network_access",
+		name="Network Access",
+		icon="mdi:network",
+	),
+	SensorEntityDescription(
+		key="max_cpes",
+		name="Maximum Number of CPEs",
+		icon="mdi:devices",
+	),
+	SensorEntityDescription(
+		key="baseline_privacy",
+		name="Baseline Privacy",
+		icon="mdi:shield",
+	),
+	SensorEntityDescription(
+		key="docsis_mode",
+		name="DOCSIS Mode",
+		icon="mdi:network",
+	),
+	SensorEntityDescription(
+		key="config_file",
+		name="Config File",
+		icon="mdi:file-document",
+	),
+	SensorEntityDescription(
+		key="primary_downstream_sfid",
+		name="Primary Downstream SFID",
+		icon="mdi:download",
+	),
+	SensorEntityDescription(
+		key="primary_downstream_max_traffic_rate",
+		name="Primary Downstream Max Traffic Rate",
+		icon="mdi:download",
+	),
+	SensorEntityDescription(
+		key="primary_downstream_max_traffic_burst",
+		name="Primary Downstream Max Traffic Burst",
+		icon="mdi:download",
+	),
+	SensorEntityDescription(
+		key="primary_downstream_min_traffic_rate",
+		name="Primary Downstream Min Traffic Rate",
+		icon="mdi:download",
+	),
+	SensorEntityDescription(
+		key="primary_upstream_sfid",
+		name="Primary Upstream SFID",
+		icon="mdi:upload",
+	),
+	SensorEntityDescription(
+		key="primary_upstream_max_traffic_rate",
+		name="Primary Upstream Max Traffic Rate",
+		icon="mdi:upload",
+	),
+	SensorEntityDescription(
+		key="primary_upstream_max_traffic_burst",
+		name="Primary Upstream Max Traffic Burst",
+		icon="mdi:upload",
+	),
+	SensorEntityDescription(
+		key="primary_upstream_min_traffic_rate",
+		name="Primary Upstream Min Traffic Rate",
+		icon="mdi:upload",
+	),
+	SensorEntityDescription(
+		key="primary_upstream_max_concatenated_burst",
+		name="Primary Upstream Max Concatenated Burst",
+		icon="mdi:upload",
+	),
+	SensorEntityDescription(
+		key="primary_upstream_scheduling_type",
+		name="Primary Upstream Scheduling Type",
+		icon="mdi:upload",
 	),
 ]
 
@@ -109,7 +219,11 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 								if isinstance(json_data, dict):
 									oper = json_data.get("js_cm_oper_value")
 									reg = json_data.get("js_cm_reg_value")
-									# Simple human readable mapping
+									wan_ip_mode = json_data.get("js_wan_ip_prov_mode")
+									fail_safe = json_data.get("js_fail_safe_mode")
+									no_rf = json_data.get("js_NoRF_Detected")
+
+									# Simple human readable mapping for operational status
 									if oper is not None:
 										try:
 											oper_val = int(oper)
@@ -119,9 +233,51 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 												data["cable_modem_status"] = "Offline"
 										except Exception:
 											data["cable_modem_status"] = str(oper)
+
+									# Registration status mapping
+									if reg is not None:
+										try:
+											reg_val = int(reg)
+											reg_map = {
+												0: "Unregistered",
+												1: "Other",
+												2: "Registered",
+												3: "Not Registered",
+												4: "Registration Complete",
+												5: "Access Denied",
+												6: "Operational",
+											}
+											data["cable_modem_registration"] = reg_map.get(reg_val, f"Unknown ({reg_val})")
+										except Exception:
+											data["cable_modem_registration"] = str(reg)
+
+									# WAN IP provision mode mapping
+									if wan_ip_mode is not None:
+										try:
+											mode_val = int(wan_ip_mode)
+											mode_map = {
+												0: "DHCP",
+												1: "Static",
+												2: "PPPoE",
+											}
+											data["wan_ip_provision_mode"] = mode_map.get(mode_val, f"Unknown ({mode_val})")
+										except Exception:
+											data["wan_ip_provision_mode"] = str(wan_ip_mode)
+
+									# Fail safe mode
+									if fail_safe is not None:
+										data["fail_safe_mode"] = "Active" if str(fail_safe) == "1" else "Inactive"
+
+									# No RF detected
+									if no_rf is not None:
+										data["no_rf_detected"] = "Yes" if str(no_rf) == "1" else "No"
+
 									# Store raw values as attributes
 									data["js_cm_oper_value"] = oper
 									data["js_cm_reg_value"] = reg
+									data["js_wan_ip_prov_mode"] = wan_ip_mode
+									data["js_fail_safe_mode"] = fail_safe
+									data["js_NoRF_Detected"] = no_rf
 							except Exception as err:
 								_LOGGER.debug("Error parsing connection_troubleshoot_data JSON: %s", err)
 						else:
@@ -129,60 +285,57 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 				except Exception as err:
 					_LOGGER.debug("Error calling connection_troubleshoot_data: %s", err)
 
-				# 2) Try ajaxGet_device_networkstatus_data.php - contains downstream/upstream channel arrays
+				# 2) Try ajaxGet_device_networkstatus_data.php - contains all status and config data
 				try:
 					dn_url = f"http://{self.host}/php/ajaxGet_device_networkstatus_data.php"
 					async with session.post(dn_url) as resp:
 						if resp.status == 200:
-							# This endpoint returns JSON array; many elements are strings and some are JSON-encoded strings
+							# This endpoint returns JSON array with all the data we need
 							j = await resp.json()
 							_LOGGER.debug("ajaxGet_device_networkstatus_data returned, len=%s", len(j) if hasattr(j, '__len__') else 'n')
-							# Find docsis version and downstream info
 							try:
-								if isinstance(j, list):
-									# find docsis version token (e.g., '3.1')
-									for item in j:
-										if isinstance(item, str) and '3.' in item and any(ch.isdigit() for ch in item):
-											data["docsis_version"] = item.strip()
-									# find 'Locked' as primary downstream channel
-									if any(isinstance(x, str) and 'Locked' in x for x in j):
-										data["primary_downstream_channel"] = "Locked"
-									# find JSON-encoded arrays inside list
-									for item in j:
-										if isinstance(item, str):
-											s = item.strip()
-											if s.startswith('['):
-												try:
-													nested = json.loads(s)
-												except Exception:
-													# ignore malformed nested JSON
-													continue
-												# Heuristics: if nested[0] looks like downstream (freq, power, modulation)
-												if isinstance(nested, list) and nested and isinstance(nested[0], list):
-													# Use number of entries as channel count
-													count = len(nested)
-													# If docsis_version contains '3.1', assume these are 3.1 channels else 3.0
-													if data.get('docsis_version', '').startswith('3.1'):
-														data['docsis_3_1_downstream'] = count
-													else:
-														# fallback assign to 3.0 downstream if not already set
-														if 'docsis_3_0_downstream' not in data:
-															data['docsis_3_0_downstream'] = count
+								if isinstance(j, list) and len(j) >= 30:
+									# Extract config and status data by index
+									# Index mapping based on endpoint response
+									data["primary_downstream_channel"] = j[2] if j[2] == "Locked" else None
+									data["isp_provider"] = self._map_customer_id(j[4]) if isinstance(j[4], int) else None
+									data["network_access"] = j[5]
+									data["max_cpes"] = j[6]
+									data["baseline_privacy"] = j[7]
+									data["docsis_version"] = j[8]  # Also set as docsis_version for compatibility
+									data["docsis_mode"] = j[8]
+									data["config_file"] = j[9]
+									data["primary_downstream_sfid"] = j[10]
+									data["primary_downstream_max_traffic_rate"] = j[11]
+									data["primary_downstream_max_traffic_burst"] = j[12]
+									data["primary_downstream_min_traffic_rate"] = j[13]
+									data["primary_upstream_sfid"] = j[14]
+									data["primary_upstream_max_traffic_rate"] = j[15]
+									data["primary_upstream_max_traffic_burst"] = j[16]
+									data["primary_upstream_min_traffic_rate"] = j[17]
+									data["primary_upstream_max_concatenated_burst"] = j[18]
+									data["primary_upstream_scheduling_type"] = j[19]
+
+									# Channel counts are provided directly at the end
+									if len(j) >= 29:
+										upstream_3_0_count = int(j[25]) if str(j[25]).isdigit() else 0
+										downstream_3_0_count = int(j[26]) if str(j[26]).isdigit() else 0
+										downstream_3_1_count = int(j[27]) if str(j[27]).isdigit() else 0
+										upstream_3_1_count = int(j[28]) if str(j[28]).isdigit() else 0
+
+										data['docsis_3_0_downstream'] = downstream_3_0_count
+										data['docsis_3_0_upstream'] = upstream_3_0_count
+										data['docsis_3_1_downstream'] = downstream_3_1_count
+										data['docsis_3_1_upstream'] = upstream_3_1_count
+										data['total_downstream_channels'] = downstream_3_0_count + downstream_3_1_count
+										data['total_upstream_channels'] = upstream_3_0_count + upstream_3_1_count
+
 							except Exception as err:
 								_LOGGER.debug("Unexpected format from %s: %s", dn_url, err)
 						else:
 							_LOGGER.debug("%s returned HTTP %s", dn_url, resp.status)
 				except Exception as err:
 					_LOGGER.debug("Error calling ajaxGet_device_networkstatus_data: %s", err)
-
-				# Merge with any existing HTML-based parsing results
-				if not data:
-					# try parsing main page if nothing found
-					data = self._parse_status_page(html_content, html_content)
-				else:
-					# enrich with parsed isp provider if missing
-					if html_content and "isp_provider" not in data:
-						data["isp_provider"] = self._parse_isp_provider(html_content)
 
 				return data
 		except asyncio.TimeoutError as err:
@@ -324,6 +477,19 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 		except Exception as err:
 			_LOGGER.warning("Error parsing ISP provider: %s", err)
 			return "Unknown Provider"
+
+	def _map_customer_id(self, customer_id: int) -> str:
+		"""Map customer ID to ISP provider name."""
+		provider_map = {
+			6: "Virgin Media (VTR)",
+			8: "Virgin Media",
+			20: "Ziggo",
+			41: "Virgin Media Ireland",
+			44: "Telekom Austria",
+			50: "Yallo",
+			51: "Sunrise",
+		}
+		return provider_map.get(customer_id, f"Liberty Global International (ID: {customer_id})")
 
 
 async def async_setup_entry(
