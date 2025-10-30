@@ -2,25 +2,31 @@
 
 A Home Assistant custom component for monitoring Arris router status via HACS.
 
-This component connects to your Arris router (ARRIS-based modem) and extracts cable modem status information from the unauthenticated status page.
+This component connects to your Arris router (ARRIS-based modem) and extracts cable modem status information. It currently provides ISP provider detection and attempts to extract status data from various endpoints.
 
 ## Features
 
-- **Cable Modem Status**: Shows if the modem is online and the DOCSIS version
-- **Primary Downstream Channel**: Lock status and channel type
-- **Channel Overview**: Number of DOCSIS 3.0 and 3.1 downstream/upstream channels
+- **ISP Provider Detection**: Automatically detects your ISP (Virgin Media, Ziggo, Telekom Austria, etc.)
+- **Cable Modem Status**: Shows modem status when accessible (may require authentication)
+- **Channel Information**: DOCSIS channel counts when data is available
+
+## Current Status
+
+✅ **Working**: ISP Provider detection  
+⚠️ **Limited**: Status data extraction (requires router authentication for full data)  
+🔄 **In Development**: Alternative data collection methods
 
 ## Sensors
 
 The component creates the following sensors:
 
-- `sensor.cable_modem_status` - Overall modem status
-- `sensor.primary_downstream_channel` - Primary downstream channel status  
-- `sensor.docsis_3_0_downstream_channels` - Number of DOCSIS 3.0 downstream channels
-- `sensor.docsis_3_0_upstream_channels` - Number of DOCSIS 3.0 upstream channels
-- `sensor.docsis_3_1_downstream_channels` - Number of DOCSIS 3.1 downstream channels
-- `sensor.docsis_3_1_upstream_channels` - Number of DOCSIS 3.1 upstream channels
-- `sensor.isp_provider` - ISP provider (Virgin Media, Ziggo, etc.)
+- `sensor.isp_provider` - ISP provider (Virgin Media, Ziggo, etc.) - ✅ Working
+- `sensor.cable_modem_status` - Overall modem status - ⚠️ Limited
+- `sensor.primary_downstream_channel` - Primary downstream channel status - ⚠️ Limited
+- `sensor.docsis_3_0_downstream_channels` - Number of DOCSIS 3.0 downstream channels - ⚠️ Limited
+- `sensor.docsis_3_0_upstream_channels` - Number of DOCSIS 3.0 upstream channels - ⚠️ Limited
+- `sensor.docsis_3_1_downstream_channels` - Number of DOCSIS 3.1 downstream channels - ⚠️ Limited
+- `sensor.docsis_3_1_upstream_channels` - Number of DOCSIS 3.1 upstream channels - ⚠️ Limited
 
 ## Installation
 
@@ -38,7 +44,7 @@ The component creates the following sensors:
 
 ### Manual Installation
 
-1. Copy the `custom_components/virgin_media_status` folder to your Home Assistant `custom_components` directory
+1. Copy the `custom_components/ha_arris_router_status` folder to your Home Assistant `custom_components` directory
 2. Restart Home Assistant
 3. Go to Configuration > Integrations
 4. Click "Add Integration" and search for "Arris Router Status"
@@ -51,42 +57,39 @@ The component creates the following sensors:
 4. Enter your router's IP address (default: 192.168.100.1)
 5. Click Submit
 
-The component will automatically detect your Arris router and start monitoring the status.
-
 ## Requirements
 
-- Arris router in modem mode (ARRIS-based)
+- Arris router in modem mode (ARRIS-based firmware)
 - Router accessible at the configured IP address
-- Unauthenticated status page must be available
+- Network connectivity between Home Assistant and router
 
 ## Supported Routers
 
 This component has been tested with:
-- Arris ARRIS routers in modem mode
+- Arris routers with ARRIS firmware
 - Default IP: 192.168.100.1
+- ISP Provider detection works for: Virgin Media, Ziggo, Telekom Austria, Yallo, Sunrise
 
-The status page should contain information like:
-```
-Cable Modem Status
-Item                        Status      Comments
-Cable Modem Status          Online      DOCSIS 3.1
-Primary downstream channel  Locked      SC-QAM
-Channel Overview            Downstream  Upstream
-DOCSIS 3.0 channels         32          5
-DOCSIS 3.1 channels         1           1
-```
+## Authentication Requirements
+
+**Current Limitation**: The ARRIS router firmware requires authentication to access full status data. The component currently:
+
+- ✅ Successfully detects ISP provider from the login page
+- ⚠️ Attempts multiple endpoints for status data but may show "Unavailable" if authentication is required
+
+**Future Enhancement**: SNMP support or authenticated API access may be added in future versions.
 
 ## Troubleshooting
 
+### ISP Provider Shows Correctly But Status Shows "Unavailable"
+- This is expected behavior for routers requiring authentication
+- The component successfully detects your ISP but cannot access detailed status data
+- Check router firmware version and authentication requirements
+
 ### Component Not Loading
 - Ensure the router IP address is correct
-- Check that your router is in modem mode
-- Verify the status page is accessible from your Home Assistant instance
-
-### No Data in Sensors
-- Check the Home Assistant logs for parsing errors
-- Verify the router status page format matches expected structure
-- The component may need adjustment for different router firmware versions
+- Check that your router uses ARRIS firmware
+- Verify network connectivity to the router
 
 ### Connection Issues
 - Ensure Home Assistant can reach the router IP
