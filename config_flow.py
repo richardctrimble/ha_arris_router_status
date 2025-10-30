@@ -1,4 +1,4 @@
-"""Config flow for Virgin Media Router Status integration."""
+"""Config flow for Arris Router Status integration."""
 from __future__ import annotations
 
 import logging
@@ -24,7 +24,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Virgin Media Router Status."""
+    """Handle a config flow for Arris Router Status."""
 
     VERSION = 1
 
@@ -46,7 +46,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
             else:
                 return self.async_create_entry(
-                    title=f"Virgin Media Router ({user_input[CONF_HOST]})",
+                    title=f"Arris Router ({user_input[CONF_HOST]})",
                     data=user_input,
                 )
 
@@ -65,10 +65,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     if response.status != 200:
                         raise CannotConnect
                     
-                    # Check if the response contains expected Virgin Media router content
+                    # Check if the response contains expected Arris router content
                     html = await response.text()
                     if "cable modem" not in html.lower() and "docsis" not in html.lower():
-                        _LOGGER.warning("Router page doesn't contain expected Virgin Media content")
+                        _LOGGER.warning("Router page doesn't contain expected Arris content")
                     
                     return True
         except aiohttp.ClientError as err:

@@ -1,4 +1,4 @@
-"""Virgin Media Router Status sensor platform."""
+"""Arris Router Status sensor platform."""
 from __future__ import annotations
 
 import asyncio
@@ -57,11 +57,16 @@ SENSOR_DESCRIPTIONS = [
 		name="DOCSIS 3.1 Upstream Channels",
 		icon="mdi:upload-network",
 	),
+	SensorEntityDescription(
+		key="isp_provider",
+		name="ISP Provider",
+		icon="mdi:account-network",
+	),
 ]
 
 
-class VirginMediaDataUpdateCoordinator(DataUpdateCoordinator):
-	"""Class to manage fetching data from Virgin Media router."""
+class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
+	"""Class to manage fetching data from Arris router."""
 
 	def __init__(self, hass: HomeAssistant, host: str) -> None:
 		"""Initialize."""
@@ -118,11 +123,14 @@ class VirginMediaDataUpdateCoordinator(DataUpdateCoordinator):
 					elif "docsis 3.1 channels" in key and "upstream" in key:
 						data["docsis_3_1_upstream"] = value
 
+			# Parse ISP Provider from JavaScript
+			data["isp_provider"] = self._parse_isp_provider(html)
+
 			# Alternative parsing method - look for specific text patterns
 			if not data:
 				text = soup.get_text()
 				lines = text.split('\n')
-                
+				
 				for i, line in enumerate(lines):
 					line = line.strip()
 					if "Cable Modem Status" in line and i + 1 < len(lines):
@@ -158,10 +166,63 @@ class VirginMediaDataUpdateCoordinator(DataUpdateCoordinator):
 
 			_LOGGER.debug("Parsed data: %s", data)
 			return data
-            
+			
 		except Exception as err:
 			_LOGGER.error("Error parsing status page: %s", err)
 			raise UpdateFailed(f"Error parsing status page: {err}") from err
+
+	def _parse_isp_provider(self, html: str) -> str:
+		"""Parse ISP provider from JavaScript customer ID."""
+		try:
+			# Look for the JavaScript code that sets the customer ID
+			import re
+			
+			# Find customerId() function calls or customer ID assignments
+			customer_patterns = [
+				r'customerId\(\)\s*==\s*(\d+)',
+				r'customerId\s*=\s*(\d+)',
+				r'customerId\(\)\s*===\s*(\d+)',
+			]
+			
+			for pattern in customer_patterns:
+				matches = re.findall(pattern, html, re.IGNORECASE)
+				if matches:
+					customer_id = int(matches[0])
+					
+					# Map customer ID to provider name
+					provider_map = {
+						6: "Virgin Media (VTR)",
+						8: "Virgin Media",
+						20: "Ziggo",
+						41: "Virgin Media Ireland",
+						44: "Telekom Austria",
+						50: "Yallo",
+						51: "Sunrise",
+					}
+					
+					return provider_map.get(customer_id, f"Liberty Global International (ID: {customer_id})")
+			
+			# Fallback: try to find provider names in the JavaScript
+			if "CustNameVM" in html:
+				return "Virgin Media"
+			elif "CustNameZiggo" in html:
+				return "Ziggo"
+			elif "CustNameTMAustria" in html:
+				return "Telekom Austria"
+			elif "CustNameYallo" in html:
+				return "Yallo"
+			elif "CustNameSunrise" in html:
+				return "Sunrise"
+			elif "CustNameVMIE" in html:
+				return "Virgin Media Ireland"
+			elif "CustNameVTR" in html:
+				return "Virgin Media (VTR)"
+			else:
+				return "Unknown Provider"
+				
+		except Exception as err:
+			_LOGGER.warning("Error parsing ISP provider: %s", err)
+			return "Unknown Provider"
 
 
 async def async_setup_entry(
@@ -169,25 +230,25 @@ async def async_setup_entry(
 	config_entry: ConfigEntry,
 	async_add_entities: AddEntitiesCallback,
 ) -> None:
-	"""Set up the Virgin Media Router Status sensors."""
+	"""Set up the Arris Router Status sensors."""
 	host = config_entry.data[CONF_HOST]
     
-	coordinator = VirginMediaDataUpdateCoordinator(hass, host)
+	coordinator = ArrisDataUpdateCoordinator(hass, host)
 	await coordinator.async_config_entry_first_refresh()
 
 	entities = []
 	for description in SENSOR_DESCRIPTIONS:
-		entities.append(VirginMediaSensor(coordinator, description))
+		entities.append(ArrisSensor(coordinator, description))
 
 	async_add_entities(entities)
 
 
-class VirginMediaSensor(CoordinatorEntity, SensorEntity):
-	"""Virgin Media Router Status sensor."""
+class ArrisSensor(CoordinatorEntity, SensorEntity):
+	"""Arris Router Status sensor."""
 
 	def __init__(
 		self,
-		coordinator: VirginMediaDataUpdateCoordinator,
+		coordinator: ArrisDataUpdateCoordinator,
 		description: SensorEntityDescription,
 	) -> None:
 		"""Initialize the sensor."""
@@ -196,8 +257,8 @@ class VirginMediaSensor(CoordinatorEntity, SensorEntity):
 		self._attr_unique_id = f"{DOMAIN}_{description.key}"
 		self._attr_device_info = {
 			"identifiers": {(DOMAIN, coordinator.host)},
-			"name": "Virgin Media Router",
-			"manufacturer": "Virgin Media/ARRIS",
+			"name": "Arris Router",
+			"manufacturer": "ARRIS",
 			"model": "Cable Modem",
 		}
 

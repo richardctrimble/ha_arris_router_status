@@ -1,16 +1,16 @@
-"""The Virgin Media Router Status integration."""
+"""The Arris Router Status integration."""
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-DOMAIN = "virgin_media_status"
+DOMAIN = "ha_arris_router_status"
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Virgin Media Router Status from a config entry."""
+    """Set up Arris Router Status from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = entry.data
 

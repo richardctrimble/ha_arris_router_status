@@ -2,8 +2,8 @@
     "config": {
         "step": {
             "user": {
-                "title": "Virgin Media Router Status",
-                "description": "Enter your Virgin Media router details",
+                "title": "Arris Router Status",
+                "description": "Enter your Arris router details",
                 "data": {
                     "host": "Router IP Address"
                 }
