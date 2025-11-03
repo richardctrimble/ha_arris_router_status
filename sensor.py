@@ -3,13 +3,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import aiohttp
 import json
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
@@ -67,36 +67,43 @@ SENSOR_DESCRIPTIONS = [
 		key="docsis_3_0_downstream",
 		name="DOCSIS 3.0 Downstream Channels",
 		icon="mdi:download-network",
+		native_unit_of_measurement="channels",
 	),
 	SensorEntityDescription(
 		key="docsis_3_0_upstream",
 		name="DOCSIS 3.0 Upstream Channels",
 		icon="mdi:upload-network",
+		native_unit_of_measurement="channels",
 	),
 	SensorEntityDescription(
 		key="docsis_3_1_downstream",
 		name="DOCSIS 3.1 Downstream Channels",
 		icon="mdi:download-network",
+		native_unit_of_measurement="channels",
 	),
 	SensorEntityDescription(
 		key="docsis_3_1_upstream",
 		name="DOCSIS 3.1 Upstream Channels",
 		icon="mdi:upload-network",
+		native_unit_of_measurement="channels",
 	),
 	SensorEntityDescription(
 		key="total_downstream_channels",
 		name="Total Downstream Channels",
 		icon="mdi:download-multiple",
+		native_unit_of_measurement="channels",
 	),
 	SensorEntityDescription(
 		key="total_upstream_channels",
 		name="Total Upstream Channels",
 		icon="mdi:upload-multiple",
+		native_unit_of_measurement="channels",
 	),
 	SensorEntityDescription(
 		key="last_update_time",
 		name="Last Update Time",
 		icon="mdi:clock-outline",
+		device_class=SensorDeviceClass.TIMESTAMP,
 		entity_category=EntityCategory.DIAGNOSTIC,
 	),
 	SensorEntityDescription(
@@ -226,7 +233,7 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 												data["cable_modem_status"] = "Online"
 											else:
 												data["cable_modem_status"] = "Offline"
-										except Exception:
+										except (ValueError, TypeError):
 											data["cable_modem_status"] = str(oper)
 
 									# Registration status mapping
@@ -243,7 +250,7 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 												6: "Operational",
 											}
 											data["cable_modem_registration"] = reg_map.get(reg_val, f"Unknown ({reg_val})")
-										except Exception:
+										except (ValueError, TypeError):
 											data["cable_modem_registration"] = str(reg)
 
 									# WAN IP provision mode mapping
@@ -256,7 +263,7 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 												2: "PPPoE",
 											}
 											data["wan_ip_provision_mode"] = mode_map.get(mode_val, f"Unknown ({mode_val})")
-										except Exception:
+										except (ValueError, TypeError):
 											data["wan_ip_provision_mode"] = str(wan_ip_mode)
 
 									# Fail safe mode
@@ -267,17 +274,11 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 									if no_rf is not None:
 										data["no_rf_detected"] = "Yes" if str(no_rf) == "1" else "No"
 
-									# Store raw values as attributes
-									data["js_cm_oper_value"] = oper
-									data["js_cm_reg_value"] = reg
-									data["js_wan_ip_prov_mode"] = wan_ip_mode
-									data["js_fail_safe_mode"] = fail_safe
-									data["js_NoRF_Detected"] = no_rf
-							except Exception as err:
+							except (ValueError, KeyError, TypeError) as err:
 								_LOGGER.debug("Error parsing connection_troubleshoot_data JSON: %s", err)
 						else:
 							_LOGGER.debug("%s returned HTTP %s", ct_url, resp.status)
-				except Exception as err:
+				except (aiohttp.ClientError, asyncio.TimeoutError) as err:
 					_LOGGER.debug("Error calling connection_troubleshoot_data: %s", err)
 
 				# 2) Try ajaxGet_device_networkstatus_data.php - contains all status and config data
@@ -315,10 +316,8 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 									data["primary_upstream_max_concatenated_burst"] = j[18]
 									data["primary_upstream_scheduling_type"] = j[19]
 
-									_LOGGER.debug("Configuration data extracted: isp_provider=%s, network_access=%s, max_cpes=%s", 
-												data.get("isp_provider"), data.get("network_access"), data.get("max_cpes"))
-
 									# Channel counts are provided directly at the end
+									# Array indices: [25]=US 3.0, [26]=DS 3.0, [27]=DS 3.1, [28]=US 3.1
 									if len(j) >= 29:
 										upstream_3_0_count = int(j[25]) if str(j[25]).isdigit() else 0
 										downstream_3_0_count = int(j[26]) if str(j[26]).isdigit() else 0
@@ -337,19 +336,18 @@ class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 									_LOGGER.warning("JSON response is not a list or too short (need >=30 elements, got type=%s, len=%s)", 
 													type(j).__name__, len(j) if hasattr(j, '__len__') else 'N/A')
 
-							except Exception as err:
+							except (ValueError, KeyError, TypeError, IndexError) as err:
 								_LOGGER.error("Error parsing ajaxGet_device_networkstatus_data JSON: %s", err)
 						else:
 							_LOGGER.warning("%s returned HTTP %s", dn_url, resp.status)
-				except Exception as err:
+				except (aiohttp.ClientError, asyncio.TimeoutError) as err:
 					_LOGGER.debug("Error calling ajaxGet_device_networkstatus_data: %s", err)
 
-				# Store the last update time in UTC
-				data["last_update_time"] = datetime.utcnow().isoformat() + "Z"
+			# Store the last update time in UTC with timezone info
+			data["last_update_time"] = datetime.now(timezone.utc)
 
-				_LOGGER.info("Final data dictionary contains %d keys: %s", len(data), list(data.keys()))
-				_LOGGER.debug("Data values: %s", data)
-				return data
+			_LOGGER.debug("Data dictionary contains %d keys", len(data))
+			return data
 		except asyncio.TimeoutError as err:
 				raise UpdateFailed(f"Timeout communicating with router at {self.host}") from err
 		except aiohttp.ClientError as err:
@@ -416,9 +414,13 @@ class ArrisSensor(CoordinatorEntity, SensorEntity):
 			self._attr_entity_category = description.entity_category
 
 	@property
-	def native_value(self) -> str | None:
+	def native_value(self) -> str | int | datetime | None:
 		"""Return the state of the sensor."""
-		return self.coordinator.data.get(self.entity_description.key)
+		value = self.coordinator.data.get(self.entity_description.key)
+		# For timestamp sensors, return the datetime object directly
+		if self.entity_description.device_class == SensorDeviceClass.TIMESTAMP and isinstance(value, datetime):
+			return value
+		return value
 
 	@property
 	def available(self) -> bool:

@@ -15,15 +15,18 @@ This component connects to your Arris router (ARRIS-based modem) and extracts co
 
 ## Sensors
 
-The component creates 29 sensors, categorized as:
+The component creates 30 sensors:
 
 ### Status Sensors (13 sensors)
 Dynamic values that may change frequently:
 - Cable modem status, registration, WAN IP mode, fail-safe mode, RF detection
 - DOCSIS version and channel counts (3.0/3.1 downstream/upstream, totals)
 
-### Configuration Sensors (16 sensors)
-Static values marked as "Configuration" in Home Assistant:
+### Diagnostic Sensors (1 sensor)
+- Last Update Time (UTC timestamp of last successful router poll)
+
+### Service Flow & Configuration Sensors (16 sensors)
+Router configuration and service flow parameters from API:
 - ISP provider, network access, max CPEs, baseline privacy, DOCSIS mode, config file
 - Primary service flow parameters (SFID, traffic rates, burst limits, scheduling)
 
