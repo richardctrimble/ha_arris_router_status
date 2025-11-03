@@ -1,11 +1,11 @@
-# Arris Router Status
+# Arris Router Status -- Broken for now
 
 A Home Assistant custom component for monitoring Arris router status via HACS.
 
 It seems to work wel enough but the router seems to lock up after a while and then will not respond to UI at all untill the router is rebooted.. 
 Sad but thats the way.. I added a refresh interval to see if it might work if we do on poll so often.
 
-# Sadly due to the above this is not a useful add on 
+## Sadly due to the above this is not a useful add on 
 
 This component connects to your Arris router (ARRIS-based modem) and extracts comprehensive cable modem status, configuration, and service flow information using unauthenticated API endpoints.
 
@@ -91,3 +91,4 @@ MIT License - see LICENSE file.
 
 
 Unofficial integration not affiliated with Arris. Use at your own risk.
+
