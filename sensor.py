@@ -11,7 +11,7 @@ import json
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
+from homeassistant.const import CONF_HOST, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
@@ -24,8 +24,6 @@ from homeassistant.helpers.entity import EntityCategory
 from . import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-
-SCAN_INTERVAL = timedelta(seconds=30)
 
 SENSOR_DESCRIPTIONS = [
 	SensorEntityDescription(
@@ -192,13 +190,13 @@ SENSOR_DESCRIPTIONS = [
 class ArrisDataUpdateCoordinator(DataUpdateCoordinator):
 	"""Class to manage fetching data from Arris router."""
 
-	def __init__(self, hass: HomeAssistant, host: str) -> None:
+	def __init__(self, hass: HomeAssistant, host: str, scan_interval: int) -> None:
 		"""Initialize."""
 		super().__init__(
 			hass,
 			_LOGGER,
 			name=DOMAIN,
-			update_interval=SCAN_INTERVAL,
+			update_interval=timedelta(seconds=scan_interval),
 		)
 		self.host = host
 
@@ -374,8 +372,11 @@ async def async_setup_entry(
 ) -> None:
 	"""Set up the Arris Router Status sensors."""
 	host = config_entry.data[CONF_HOST]
+	scan_interval = config_entry.options.get(
+		CONF_SCAN_INTERVAL, config_entry.data.get(CONF_SCAN_INTERVAL, 30)
+	)
     
-	coordinator = ArrisDataUpdateCoordinator(hass, host)
+	coordinator = ArrisDataUpdateCoordinator(hass, host, scan_interval)
 	await coordinator.async_config_entry_first_refresh()
 
 	entities = []
@@ -390,6 +391,14 @@ async def async_setup_entry(
 
 	_LOGGER.info("Created %d total sensors", len(entities))
 	async_add_entities(entities)
+
+	async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+		"""Update options."""
+		await hass.config_entries.async_reload(entry.entry_id)
+
+	config_entry.async_on_unload(
+		config_entry.add_update_listener(async_update_options)
+	)
 
 
 class ArrisSensor(CoordinatorEntity, SensorEntity):
